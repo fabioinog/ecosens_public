@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Community Feed - EcoSENS</title>
+	<style>
+		:root {
+			/* Green Theme Color Palette */
+			--primary-green: #22c55e;
+			--primary-green-dark: #16a34a;
+			--primary-green-light: #4ade80;
+			--secondary-green: #166534;
+			--accent-green: #15803d;
+			--light-green: #f0fdf4;
+			--medium-green: #bbf7d0;
+			
+			/* Neutral Colors with Green Tints */
+			--white: #ffffff;
+			--background: #f0fdf4;
+			--surface: #ffffff;
+			--border: #bbf7d0;
+			--text-primary: #14532d;
+			--text-secondary: #365d3e;
+			--text-inverse: #ffffff;
+		}
+
+		* { box-sizing: border-box; margin: 0; padding: 0; }
+
+		/* Loading Screen Styles */
+		.loading-screen {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: var(--background);
+			display: none;
+			justify-content: center;
+			align-items: center;
+			z-index: 9999;
+			transition: opacity 0.5s ease-out;
+		}
+
+		.loading-screen.hidden {
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		.loading-logo {
+			width: 120px;
+			height: 120px;
+			animation: rotate 2s linear infinite;
+		}
+
+		@keyframes rotate {
+			from {
+				transform: rotate(0deg);
+			}
+			to {
+				transform: rotate(360deg);
+			}
+		}
+
+		.main-content {
+			opacity: 0;
+			transition: opacity 0.5s ease-in;
+		}
+
+		.main-content.loaded {
+			opacity: 1;
+		}
+		body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--background); color: var(--text-primary); line-height: 1.6; }
+		.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+		.topbar { background: var(--surface); border-radius: 16px; box-shadow: 0 8px 25px rgba(34, 197, 94, 0.15); padding: 20px; margin: 20px 0; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); }
+		.brand { font-weight: 800; font-size: 24px; color: var(--text-primary); display: flex; align-items: center; gap: 12px; }
+		.brand-logo { width: 32px; height: 32px; object-fit: contain; }
+		.nav { display: flex; gap: 8px; align-items: center; }
+		
+		.trend-toggle { 
+			display: flex; 
+			background: var(--light-green); 
+			border-radius: 8px; 
+			padding: 4px; 
+			border: 1px solid var(--border);
+			margin: 16px 0;
+			max-width: 300px;
+		}
+		.toggle-btn { 
+			background: transparent; 
+			border: none; 
+			padding: 10px 18px; 
+			border-radius: 6px; 
+			font-size: 14px; 
+			font-weight: 600; 
+			color: var(--text-secondary); 
+			cursor: pointer; 
+			transition: all 0.25s ease;
+			flex: 1;
+		}
+		.toggle-btn.active { 
+			background: var(--medium-green); 
+			color: #ffffff; 
+		}
+		.toggle-btn:hover:not(.active) { 
+			color: var(--text-primary); 
+		}
+		.tab { background: var(--light-green); border: 1px solid var(--border); color: var(--text-secondary); padding: 12px 20px; border-radius: 12px; cursor: pointer; font-weight: 600; text-decoration: none; transition: all 0.3s ease; font-size: 14px; }
+		.tab:hover { background: var(--medium-green); color: var(--text-primary); transform: translateY(-2px); }
+		.tab.active { background: var(--primary-green); color: var(--text-inverse); border-color: var(--primary-green-dark); box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); }
+		.btn { background: var(--primary-green); color: var(--text-inverse); border: none; padding: 14px 28px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2); }
+		.btn:hover { background: var(--primary-green-dark); transform: translateY(-2px); box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3); }
+
+		.main-card { background: var(--surface); border-radius: 16px; padding: 28px; box-shadow: 0 8px 25px rgba(34, 197, 94, 0.1); margin-bottom: 28px; border: 1px solid var(--border); transition: all 0.3s ease; }
+		.main-card:hover { box-shadow: 0 12px 35px rgba(34, 197, 94, 0.15); transform: translateY(-2px); }
+		.title { font-size: 32px; font-weight: 800; color: var(--text-primary); margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+
+		.trend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 36px; }
+		.trend-card { background: var(--surface); border-radius: 16px; padding: 28px; box-shadow: 0 8px 25px rgba(34, 197, 94, 0.1); border-left: 4px solid var(--border); transition: all 0.3s ease; }
+		.trend-card:hover { box-shadow: 0 12px 35px rgba(34, 197, 94, 0.15); transform: translateY(-2px); }
+		.trend-card.pest-trend { border-left-color: var(--primary-green); }
+		.trend-card.heat-trend { border-left-color: var(--primary-green-dark); }
+
+		.trend-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+		.trend-title { font-size: 20px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+		.confidence-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+		.confidence-high { background: var(--light-green); color: var(--primary-green-dark); }
+		.confidence-medium { background: var(--medium-green); color: var(--primary-green-dark); }
+		.confidence-low { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border); }
+
+		.trend-status { font-size: 28px; font-weight: 800; margin-bottom: 16px; color: var(--text-primary); }
+		.trend-description { color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; }
+		.trend-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+		.stat-item { text-align: center; }
+		.stat-value { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+		.stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; }
+
+		.status-critical { color: #dc2626; }
+		.status-high { color: var(--primary-green-dark); }
+		.status-moderate { color: var(--primary-green); }
+		.status-low { color: var(--primary-green-light); }
+		.status-minimal { color: #2e7d32; }
+
+		.refresh-btn { background: var(--primary-green); color: var(--text-inverse); border: none; padding: 14px 28px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px; margin-bottom: 20px; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2); }
+		.refresh-btn:hover { background: var(--primary-green-dark); transform: translateY(-2px); box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3); }
+
+		.submit-buttons { display: flex; gap: 8px; margin-bottom: 24px; }
+		.submit-buttons button, .submit-buttons a { flex: 1; text-align: center; }
+		.btn-submit { background: var(--primary-green); color: var(--text-inverse); border: none; padding: 14px 28px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2); text-decoration: none; display: inline-block; }
+		.btn-submit:hover { background: var(--primary-green-dark); transform: translateY(-2px); box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3); }
+		.btn-submit.secondary { background: var(--surface); color: var(--text-primary); border: 2px solid var(--border); }
+		.btn-submit.secondary:hover { background: var(--light-green); border-color: var(--primary-green); }
+		.loading { text-align: center; padding: 40px; color: var(--text-secondary); font-weight: 500; }
+
+		.forecast-post-btn { background: var(--primary-green); color: var(--text-inverse); border: none; padding: 16px 24px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2); }
+		.forecast-post-btn:hover { background: var(--primary-green-dark); transform: translateY(-2px); box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3); }
+		.btn-submit { background: var(--primary-green); color: var(--text-inverse); border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s ease; }
+		.btn-submit:hover { background: var(--primary-green-dark); transform: translateY(-2px); }
+		.btn-secondary { background: var(--surface); color: var(--text-primary); border: 2px solid var(--border); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px; margin-left: 8px; transition: all 0.3s ease; }
+		.btn-secondary:hover { background: var(--light-green); border-color: var(--primary-green); }
+
+		.social-post { background: #ffffff; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 4px solid #ddd; }
+		.social-post.pest-post { border-left-color: #ff6b6b; }
+		.social-post.heat-post { border-left-color: #ffa726; }
+		
+		.post-header { display: flex; align-items: center; margin-bottom: 12px; }
+		.post-user { font-weight: 700; color: #2c3e50; margin-right: 8px; }
+		.post-area { background: #e3f2fd; color: #1976d2; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+		.post-time { color: #666; font-size: 12px; margin-left: auto; }
+		
+		.post-forecast { background: #f0f0f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+		.forecast-level { font-weight: 700; margin-bottom: 6px; }
+		.forecast-description { color: #555; font-size: 14px; }
+		
+		.post-text { color: #2c3e50; margin-bottom: 16px; line-height: 1.5; }
+		
+		.comments-section { margin-top: 16px; border-top: 1px solid #eee; padding-top: 16px; }
+		.comment { display: flex; margin-bottom: 12px; }
+		.comment-user { font-weight: 600; color: #2c3e50; margin-right: 8px; font-size: 14px; }
+		.comment-text { color: #444; font-size: 14px; }
+		.comment-time { font-size: 12px; color: #666; margin-left: auto; }
+		
+		.comment-form { display: flex; gap: 12px; margin-top: 16px; }
+		.comment-input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; }
+		.comment-btn { background: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+		
+		.pie-chart-container { margin: 24px 0; display: flex; justify-content: center; }
+		.pie-chart-canvas { max-width: 240px; max-height: 240px; }
+
+
+		@media (max-width: 768px) { 
+			.container { padding: 12px; }
+			.topbar { flex-direction: column; gap: 12px; }
+			.trend-grid { grid-template-columns: 1fr; }
+		}
+	</style>
+</head>
+
+<!-- Local Chart.js -->
+<script src="/js/chart.js"></script>
+<body>
+</head>
+<body>
+	<!-- Loading Screen -->
+	<div class="loading-screen" id="loadingScreen">
+		<img src="/logo.png" alt="EcoSENS Logo" class="loading-logo">
+	</div>
+
+	<!-- Main Content -->
+	<div class="main-content" id="mainContent">
+	<div class="container">
+		<div class="topbar">
+			<div class="brand">
+				<img src="/logo.png" alt="EcoSENS Logo" class="brand-logo">
+				EcoSENS
+			</div>
+			<div class="nav">
+				<a href="/my-farm" class="tab">My Farm</a>
+				<a href="/feed" class="tab active">Feed</a>
+				<a href="/profile" class="tab">Profile</a>
+			</div>
+			<div class="actions">
+				<button class="btn" id="logoutBtn">Logout</button>
+			</div>
+		</div>
+
+		<div class="main-card">
+			<h1 class="title">
+				Community Feed
+				<span id="areaBadge" style="background: var(--light-green); color: var(--primary-green-dark); padding: 6px 12px; border-radius: 20px; font-size: 14px; border: 1px solid var(--border);">Loading...</span>
+			</h1>
+			
+			<div class="trend-toggle">
+				<button id="toggleRecent" class="toggle-btn active">Recent (Last 50)</button>
+				<button id="toggleAll" class="toggle-btn">All Time</button>
+			</div>
+			
+			<div class="submit-buttons">
+				<button class="btn-submit secondary" id="refreshFeed" style="width: 100%;">Refresh Trends</button>
+			</div>
+
+		<div class="trend-grid">
+				<div class="trend-card pest-trend" id="pestTrendCard">
+					<div class="trend-header">
+						<div class="trend-title">Pest Activity Trends</div>
+						<div id="pestConfidence" class="confidence-badge confidence-low">Loading</div>
+					</div>
+							<div id="pestStatus" class="trend-status loading">Loading...</div>
+							<div class="pie-chart-container" id="pestPieContainer">
+								<canvas id="pestPie" class="pie-chart-canvas"></canvas>
+							</div>
+							<div id="pestDescription" class="trend-description loading">Loading trend data...</div>
+					<div class="trend-stats">
+						<div class="stat-item">
+							<div id="pestParticipants" class="stat-value loading">-</div>
+							<div class="stat-label">Participants</div>
+						</div>
+						<div class="stat-item">
+							<div id="pestSubmissions" class="stat-value loading">-</div>
+							<div class="stat-label">Total Submissions</div>
+						</div>
+					</div>
+					<div style="margin-top: 12px; font-size: 14px; color: #666;">
+						<span id="pestRecentActivity" class="loading">Loading recent activity...</span>
+					</div>
+				</div>
+
+				<div class="trend-card heat-trend" id="heatTrendCard">
+					<div class="trend-header">
+						<div class="trend-title">Heat Stress Trends</div>
+						<div id="heatConfidence" class="confidence-badge confidence-low">Loading</div>
+					</div>
+							<div id="heatStatus" class="trend-status loading">Loading...</div>
+							<div class="pie-chart-container" id="heatPieContainer">
+								<canvas id="heatPie" class="pie-chart-canvas"></canvas>
+							</div>
+							<div id="heatDescription" class="trend-description loading">Loading trend data...</div>
+					<div class="trend-stats">
+						<div class="stat-item">
+							<div id="heatParticipants" class="stat-value loading">-</div>
+							<div class="stat-label">Participants</div>
+						</div>
+						<div class="stat-item">
+							<div id="heatSubmissions" class="stat-value loading">-</div>
+							<div class="stat-label">Total Submissions</div>
+						</div>
+					</div>
+					<div style="margin-top: 12px; font-size: 14px; color: #666;">
+						<span id="heatRecentActivity" class="loading">Loading recent activity...</span>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Social Feed Section -->
+		<div class="main-card" style="margin-top: 24px;">
+			<h2 class="title" style="font-size: 24px;">
+				Social Feed
+			</h2>
+			
+			<!-- Post Creation -->
+			<div class="post-creation" style="background: #f8f9fa; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+				<div style="display: flex; align-items: center; margin-bottom: 16px;">
+					<span style="font-weight: 600; color: #2c3e50;">Post a forecast:</span>
+				</div>
+				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+					<button id="postPestForecast" class="forecast-post-btn" data-type="pest">
+						Post Pest Risk Forecast
+					</button>
+					<button id="postHeatForecast" class="forecast-post-btn" data-type="heat">
+						Post Heat Stress Forecast
+					</button>
+				</div>
+				<div id="postFormContainer" style="display: none;">
+					<div style="margin-bottom: 12px;">
+						<label style="display: block; font-weight: 600; margin-bottom: 6px;">Add a comment (optional):</label>
+						<textarea id="postText" placeholder="Share your thoughts about this forecast..." 
+								  style="width: 100%; height: 80px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical;"></textarea>
+					</div>
+					<div style="display: flex; gap: 12px;">
+						<button id="confirmPost" class="btn-submit">Post Forecast</button>
+						<button id="cancelPost" class="btn-secondary">Cancel</button>
+					</div>
+					<input type="hidden" id="pendingPostType" />
+				</div>
+			</div>
+
+			<!-- Social Feed Container -->
+			<div id="socialFeedContainer">
+				<div class="loading">Loading social feed...</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		document.getElementById('logoutBtn').addEventListener('click', async () => {
+			try {
+				const res = await fetch('/api/logout', { method: 'POST' });
+				if (res.ok) {
+					window.location.href = '/login';
+				}
+			} catch (e) { 
+				console.error('Logout failed', e); 
+				window.location.href = '/login';
+			}
+		});
+
+		async function loadAreaInfo() {
+			try {
+				const res = await fetch('/api/profile');
+				const data = await res.json();
+				const areaBadge = document.getElementById('areaBadge');
+				areaBadge.textContent = `${data.country || 'Unknown Area'} Community`;
+			} catch (error) {
+				console.error('Error loading area info:', error);
+				document.getElementById('areaBadge').textContent = 'Unknown Area';
+			}
+		}
+
+		// Chart instances for both pie charts
+		let pestChartInstance = null;
+		let heatChartInstance = null;
+		
+		// Current view type (recent or all)
+		let currentViewType = 'recent';
+
+		async function loadPestTrend() {
+			try {
+				console.log('Loading client pest trend - Session check:', !!document.cookie);
+				
+			const [trendRes, countsRes] = await Promise.all([
+				fetch(`/api/community-pest-trend?type=${currentViewType}`),
+				fetch(`/api/community-pest-counts?type=${currentViewType}`)
+			]);
+				
+				console.log('Client pest trend response status:', trendRes.status);
+				console.log('Client pest counts response status:', countsRes.status);
+				
+				const [trendData, countsData] = await Promise.all([trendRes.json(), countsRes.json()]);
+				console.log('Client pest trend data:', trendData);
+				console.log('Client pest counts data:', countsData);
+				
+				if (trendData.success) {
+					const trend = trendData.trend;
+					
+					document.getElementById('pestStatus').textContent = trend.riskLevel.toUpperCase();
+					document.getElementById('pestStatus').className = `trend-status status-${trend.riskLevel}`;
+					
+					document.getElementById('pestDescription').textContent = trend.trendDescription;
+					
+					const confidenceBadge = document.getElementById('pestConfidence');
+					confidenceBadge.textContent = trend.confidence.toUpperCase();
+					confidenceBadge.className = `confidence-badge confidence-${trend.confidence}`;
+					
+					document.getElementById('pestParticipants').textContent = trend.participation;
+					document.getElementById('pestSubmissions').textContent = trend.totalSubmissions || 0;
+					document.getElementById('pestRecentActivity').textContent = trend.recentActivity;
+				} else {
+					throw new Error(trendData.error || trendData.message || 'Failed to load pest trend');
+				}
+
+				// Render pie chart
+				if (countsRes.ok && countsData.success && countsData.counts) {
+					renderPestPie(countsData.counts);
+				}
+			} catch (error) {
+				console.error('Error loading pest trend:', error);
+				document.getElementById('pestStatus').textContent = 'Error';
+				document.getElementById('pestDescription').textContent = `Unable to load pest trend data: ${error.message}`;
+				
+				// Show user-friendly error messages based on common issues
+				if (error.message.includes('profile_not_found')) {
+					document.getElementById('pestDescription').textContent = 'Please set your location in Profile to see trends';
+				} else if (error.message.includes('trend_failed')) {
+					document.getElementById('pestDescription').textContent = 'Server error processing trend data';
+				} else if (error.message.includes('response')) {
+					document.getElementById('pestDescription').textContent = 'Connection error - please refresh the page';
+				}
+			}
+		}
+
+		function renderPestPie(counts) {
+			const container = document.getElementById('pestPieContainer');
+			if (!container) return;
+
+			const labels = ['Very Low', 'Low', 'Moderate', 'High', 'Very High'];
+			const levels = ['very_low', 'low', 'moderate', 'high', 'very_high'];
+			const values = levels.map(l => counts[l] || 0);
+			const colors = ['#65a30d', '#84cc16', '#eab308', '#f97316', '#dc2626'];
+
+			const config = {
+				type: 'pie',
+				data: {
+					labels: labels,
+					datasets: [{ 
+						data: values, 
+						backgroundColor: colors,
+						borderWidth: 2,
+						borderColor: '#ffffff'
+					}]
+				},
+				options: { 
+					responsive: true, 
+					maintainAspectRatio: true,
+					plugins: {
+						legend: {
+							position: 'bottom',
+							labels: {
+								padding: 20,
+								font: {
+									size: 12
+								}
+							}
+						},
+						tooltip: {
+							enabled: false
+						}
+					}
+				}
+			};
+
+			if (pestChartInstance) {
+				pestChartInstance.destroy();
+			}
+
+			// Use our custom Chart implementation
+			pestChartInstance = createSimplePie({
+				container: container,
+				data: {
+					labels: labels,
+					values: values
+				},
+				colors: colors,
+				width: 240,
+				height: 240
+			});
+		}
+
+		async function loadHeatStressTrend() {
+			try {
+				console.log('Loading client heat stress trend - Session check:', !!document.cookie);
+				
+			const [trendRes, countsRes] = await Promise.all([
+				fetch(`/api/community-heat-trend?type=${currentViewType}`),
+				fetch(`/api/community-heat-counts?type=${currentViewType}`)
+			]);
+				
+				console.log('Client heat trend response status:', trendRes.status);
+				console.log('Client heat counts response status:', countsRes.status);
+				
+				const [trendData, countsData] = await Promise.all([trendRes.json(), countsRes.json()]);
+				console.log('Client heat trend data:', trendData);
+				console.log('Client heat counts data:', countsData);
+				
+				if (trendData.success) {
+					const trend = trendData.trend;
+					
+					document.getElementById('heatStatus').textContent = trend.heatStressLevel.toUpperCase();
+					document.getElementById('heatStatus').className = `trend-status status-${trend.heatStressLevel}`;
+					
+					document.getElementById('heatDescription').textContent = trend.trendDescription;
+					
+					const confidenceBadge = document.getElementById('heatConfidence');
+					confidenceBadge.textContent = trend.confidence.toUpperCase();
+					confidenceBadge.className = `confidence-badge confidence-${trend.confidence}`;
+					
+					document.getElementById('heatParticipants').textContent = trend.participation;
+					document.getElementById('heatSubmissions').textContent = trend.totalSubmissions || 0;
+					document.getElementById('heatRecentActivity').textContent = trend.recentActivity;
+				} else {
+					throw new Error(trendData.error || trendData.message || 'Failed to load heat stress trend');
+				}
+
+				// Render pie chart
+				if (countsRes.ok && countsData.success && countsData.counts) {
+					renderHeatPie(countsData.counts);
+				}
+			} catch (error) {
+				console.error('Error loading heat stress trend:', error);
+				document.getElementById('heatStatus').textContent = 'Error';
+				document.getElementById('heatDescription').textContent = `Unable to load heat stress trend data: ${error.message}`;
+				
+				// Show user-friendly error messages based on common issues
+				if (error.message.includes('profile_not_found')) {
+					document.getElementById('heatDescription').textContent = 'Please set your location in Profile to see trends';
+				} else if (error.message.includes('trend_failed')) {
+					document.getElementById('heatDescription').textContent = 'Server error processing trend data';
+				} else if (error.message.includes('response')) {
+					document.getElementById('heatDescription').textContent = 'Connection error - please refresh the page';
+				}
+			}
+		}
+
+		function renderHeatPie(counts) {
+			const container = document.getElementById('heatPieContainer');
+			if (!container) return;
+
+			const labels = ['Minimal', 'Low', 'Moderate', 'High', 'Critical'];
+			const levels = ['minimal', 'low', 'moderate', 'high', 'critical'];
+			const values = levels.map(l => counts[l] || 0);
+			const colors = ['#65a30d', '#84cc16', '#eab308', '#f97316', '#dc2626'];
+
+			const config = {
+				type: 'pie',
+				data: {
+					labels: labels,
+					datasets: [{ 
+						data: values, 
+						backgroundColor: colors,
+						borderWidth: 2,
+						borderColor: '#ffffff'
+					}]
+				},
+				options: { 
+					responsive: true, 
+					maintainAspectRatio: true,
+					plugins: {
+						legend: {
+							position: 'bottom',
+							labels: {
+								padding: 20,
+								font: {
+									size: 12
+								}
+							}
+						},
+						tooltip: {
+							enabled: false
+						}
+					}
+				}
+			};
+
+			if (heatChartInstance) {
+				heatChartInstance.destroy();
+			}
+
+			// Use our custom Chart implementation
+			heatChartInstance = createSimplePie({
+				container: container,
+				data: {
+					labels: labels,
+					values: values
+				},
+				colors: colors,
+				width: 240,
+				height: 240
+			});
+		}
+
+		async function refreshFeed() {
+			await loadAreaInfo();
+			await Promise.all([
+				loadPestTrend(),
+				loadHeatStressTrend()
+			]);
+		}
+
+		document.getElementById('refreshFeed').addEventListener('click', refreshFeed);
+		
+		refreshFeed();
+		setInterval(refreshFeed, 120000); // Auto-refresh every 2 minutes
+
+		// Social Feed Functions
+		let pendingPostType = null;
+
+		// Post forecast buttons
+		document.getElementById('postPestForecast').addEventListener('click', () => {
+			pendingPostType = 'pest';
+			document.getElementById('pendingPostType').value = 'pest';
+			document.getElementById('postFormContainer').style.display = 'block';
+			document.getElementById('postText').focus();
+		});
+
+		document.getElementById('postHeatForecast').addEventListener('click', () => {
+			pendingPostType = 'heat';
+			document.getElementById('pendingPostType').value = 'heat';
+			document.getElementById('postFormContainer').style.display = 'block';
+			document.getElementById('postText').focus();
+		});
+
+		// Cancel post
+		document.getElementById('cancelPost').addEventListener('click', () => {
+			document.getElementById('postFormContainer').style.display = 'none';
+			document.getElementById('postText').value = '';
+			pendingPostType = null;
+		});
+
+		// Confirm post
+		document.getElementById('confirmPost').addEventListener('click', async () => {
+			const postText = document.getElementById('postText').value.trim();
+			const postType = pendingPostType;
+
+			if (!postType) {
+				alert('Please select a forecast type');
+				return;
+			}
+
+			try {
+				const res = await fetch('/api/post-forecast', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ postType, postText })
+				});
+
+				const data = await res.json();
+
+				if (data.success) {
+					alert('Forecast posted successfully!');
+					document.getElementById('postFormContainer').style.display = 'none';
+					document.getElementById('postText').value = '';
+					pendingPostType = null;
+					loadSocialFeed(); // Refresh feed
+				} else {
+					alert('Error posting forecast: ' + (data.error || 'Unknown error'));
+				}
+			} catch (error) {
+				console.error('Error posting forecast:', error);
+				alert('Error posting forecast. Please try again.');
+			}
+		});
+
+		// Load social feed
+		async function loadSocialFeed() {
+			try {
+				const res = await fetch('/api/social-feed');
+				const data = await res.json();
+
+				const container = document.getElementById('socialFeedContainer');
+
+				if (data.success && data.posts.length > 0 ) {
+					container.innerHTML = data.posts.map(post => {
+						const classType = post.type === 'pest' ? 'pest-post' : 'heat-post';
+						const icon = '';
+						const levelClass = `status-${post.forecastLevel}`;
+
+						const timeAgo = formatTimeAgo(post.createdAt);
+
+						return `
+							<div class="social-post ${classType}">
+								<div class="post-header">
+									<span class="post-user">${post.realName || post.username} (@${post.username})</span>
+									<span class="post-area">${icon} ${post.area}</span>
+									<span class="post-time">${timeAgo}</span>
+								</div>
+								
+								<div class="post-forecast">
+									<div class="forecast-level ${levelClass}">${post.forecastDescription}</div>
+									<div class="forecast-description">${formatSnapshotData(post.snapshotData, post.type)}</div>
+								</div>
+
+								${post.text ? `<div class="post-text">${post.text}</div>` : ''}
+
+								<div class="comments-section">
+									${post.comments.map(comment => `
+														<div class="comment">
+															<span class="comment-user">${comment.realName || comment.username} (@${comment.username})</span>
+															<span class="comment-text">${comment.text}</span>
+															<span class="comment-time">${formatTimeAgo(comment.createdAt)}</span>
+														</div>
+									`).join('')}
+
+									<div class="comment-form">
+										<input type="text" class="comment-input" placeholder="Write a comment..." data-post-id="${post.id}" />
+										<button class="comment-btn" onclick="postComment(${post.id}, this.previousElementSibling)">Comment</button>
+									</div>
+								</div>
+							</div>
+						`;
+					}).join('');
+				} else {
+					container.innerHTML = '<div class="loading">No posts yet. Be the first to share your forecast!</div>';
+				}
+			} catch (error) {
+				console.error('Error loading social feed:', error);
+				document.getElementById('socialFeedContainer').innerHTML = '<div class="loading">Error loading social feed</div>';
+			}
+		}
+
+		// Format snapshot data for display
+		function formatSnapshotData(snapshotData, type) {
+			if (type === 'pest') {
+				return `Level: ${snapshotData.riskLevel?.toUpperCase() || 'N/A'}`;
+			} else {
+				return `Level: ${snapshotData.heatStressLevel?.toUpperCase() || 'N/A'}`;
+			}
+		}
+
+		// Format time ago
+		function formatTimeAgo(dateString) {
+			const now = new Date();
+			const postTime = new Date(dateString);
+			const diffMs = now - postTime;
+			const diffMins = Math.floor(diffMs / 60000);
+
+			if (diffMins < 1) return 'Just now';
+			if (diffMins < 60) return `${diffMins}m ago`;
+			const diffHours = Math.floor(diffMins / 60);
+			if (diffHours < 24) return `${diffHours}h ago`;
+			const diffDays = Math.floor(diffHours / 24);
+			return `${diffDays}d ago`;
+		}
+
+		// Post comment function
+		window.postComment = async function(postId, inputElement) {
+			const commentText = inputElement.value.trim();
+
+			if (!commentText) {
+				alert('Please enter a comment');
+				return;
+			}
+
+			try {
+				const res = await fetch('/api/post-comment', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ postId, commentText })
+				});
+
+				const data = await res.json();
+
+				if (data.success) {
+					inputElement.value = '';
+					loadSocialFeed(); // Refresh feed
+				} else {
+					alert('Error posting comment: ' + (data.error || 'Unknown error'));
+				}
+			} catch (error) {
+				console.error('Error posting comment:', error);
+				alert('Error posting comment. Please try again.');
+			}
+		}
+
+		// Toggle functionality for recent vs all-time view
+		function toggleViewType(type) {
+			if (currentViewType === type) return;
+			
+			currentViewType = type;
+			
+			// Update toggle buttons
+			document.getElementById('toggleRecent').classList.toggle('active', type === 'recent');
+			document.getElementById('toggleAll').classList.toggle('active', type === 'all');
+			
+			// Reload data with new filter
+			refreshFeed();
+		}
+		
+		// Initialize toggle button listeners
+		document.getElementById('toggleRecent')?.addEventListener('click', () =>{
+			toggleViewType('recent');
+		});
+		document.getElementById('toggleAll')?.addEventListener('click', () => {
+			toggleViewType('all');
+		});
+
+		// Load social feed on page load
+		loadSocialFeed();
+		setInterval(loadSocialFeed, 60000); // Refresh every minute
+
+		// Loading Screen Management
+		window.addEventListener('load', function() {
+			// Only show loading screen after login/signup
+			const showLoadingScreen = sessionStorage.getItem('showLoadingScreen');
+			if (showLoadingScreen === 'true') {
+				// Clear the flag so it doesn't show on subsequent pages
+				sessionStorage.removeItem('showLoadingScreen');
+				
+				// Show loading screen
+				const loadingScreen = document.getElementById('loadingScreen');
+				const mainContent = document.getElementById('mainContent');
+				
+				loadingScreen.style.display = 'flex';
+				
+				setTimeout(() => {
+					loadingScreen.classList.add('hidden');
+					mainContent.classList.add('loaded');
+					
+					// Remove loading screen from DOM after fade out
+					setTimeout(() => {
+						loadingScreen.style.display = 'none';
+					}, 500);
+				}, 1000);
+			} else {
+				// Keep loading screen hidden for normal page navigation
+				const mainContent = document.getElementById('mainContent');
+				mainContent.classList.add('loaded');
+			}
+		});
+	</script>
+
+	</div>
+</body>
+</html>

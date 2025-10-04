@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>EcoSENS</title>
+	<style>
+		:root {
+			/* Green Theme Color Palette */
+			--primary-green: #22c55e;
+			--primary-green-dark: #16a34a;
+			--primary-green-light: #4ade80;
+			--secondary-green: #166534;
+			--accent-green: #15803d;
+			--light-green: #f0fdf4;
+			--medium-green: #bbf7d0;
+			
+			/* Neutral Colors with Green Tints */
+			--white: #ffffff;
+			--background: #f0fdf4;
+			--surface: #ffffff;
+			--border: #bbf7d0;
+			--text-primary: #14532d;
+			--text-secondary: #365d3e;
+			--text-inverse: #ffffff;
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		/* Loading Screen Styles */
+		.loading-screen {
+			position: fixed;
+			top: 0;
+			left: 0;
+			counter-reset: auto;
+			width: 100%;
+			height: 100%;
+			background: var(--background);
+			display: none;
+			justify-content: center;
+			align-items: center;
+			z-index: 9999;
+			transition: opacity 0.5s ease-out;
+		}
+
+		.loading-screen.hidden {
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		.loading-logo {
+			width: 120px;
+			height: 120px;
+			animation: rotate 2s linear infinite;
+		}
+
+		@keyframes rotate {
+			from {
+				transform: rotate(0deg);
+			}
+			to {
+				transform: rotate(360deg);
+			}
+		}
+
+		.main-content {
+			opacity: 0;
+			transition: opacity 0.5s ease-in;
+		}
+
+		.main-content.loaded {
+			opacity: 1;
+		}
+		body {
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			background: var(--background);
+			color: var(--text-primary);
+		}
+		.container {
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 20px;
+		}
+		.topbar {
+			background: var(--surface);
+			border-radius: 16px;
+			box-shadow: 0 8px 25px rgba(34, 197, 94, 0.15);
+			padding: 20px;
+			margin: 20px 0;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			border: 1px solid var(--border);
+		}
+		.brand {
+			font-weight: 800;
+			font-size: 24px;
+			color: var(--text-primary);
+			display: flex;
+			align-items: center;
+			gap: 12px;
+		}
+		.brand-logo {
+			width: 32px;
+			height: 32px;
+			object-fit: contain;
+		}
+		.nav {
+			display: flex;
+			gap: 8px;
+		}
+		.tab {
+			background: var(--light-green);
+			border: 1px solid var(--border);
+			color: var(--text-secondary);
+			padding: 12px 20px;
+			border-radius: 12px;
+			cursor: pointer;
+			font-weight: 600;
+			text-decoration: none;
+			transition: all 0.3s ease;
+			font-size: 14px;
+		}
+		.tab:hover {
+			background: var(--medium-green);
+			color: var(--text-primary);
+			transform: translateY(-2px);
+		}
+		.tab.active {
+			background: var(--primary-green);
+			color: var(--text-inverse);
+			border-color: var(--primary-green-dark);
+			box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+		}
+		.btn {
+			background: var(--primary-green);
+			color: var(--text-inverse);
+			border: none;
+			padding: 14px 28px;
+			border-radius: 12px;
+			font-weight: 600;
+			font-size: 14px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+		}
+		.btn:hover {
+			background: var(--primary-green-dark);
+			transform: translateY(-2px);
+			box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+		}
+		.btn-submit {
+			background: var(--primary-green);
+			color: var(--text-inverse);
+			border: none;
+			padding: 14px 28px;
+			border-radius: 12px;
+			cursor: pointer;
+			font-weight: 600;
+			font-size: 14px;
+			transition: all 0.3s ease;
+			box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+			text-decoration: none;
+			display: inline-block;
+		}
+		.btn-submit:hover {
+			background: var(--primary-green-dark);
+			transform: translateY(-2px);
+			box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+		}
+		.btn-submit.secondary {
+			background: var(--surface);
+			color: var(--text-primary);
+			border: 2px solid var(--border);
+		}
+		.btn-submit.secondary:hover {
+			background: var(--light-green);
+			border-color: var(--primary-green);
+		}
+		.card {
+			background: var(--surface);
+			border-radius: 16px;
+			padding: 28px;
+			box-shadow: 0 8px 25px rgba(34, 197, 94, 0.1);
+			margin-bottom: 28px;
+			border: 1px solid var(--border);
+			transition: all 0.3s ease;
+		}
+		.card:hover {
+			box-shadow: 0 12px 35px rgba(34, 197, 94, 0.15);
+			transform: translateY(-2px);
+		}
+		.grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 24px;
+		}
+		.form-group {
+			margin-bottom: 20px;
+		}
+		label {
+			display: block;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--text-secondary);
+			margin-bottom: 8px;
+		}
+		input[type="number"] {
+			width: 100%;
+			padding: 12px 16px;
+			border: 2px solid var(--border);
+			border-radius: 12px;
+			font-size: 14px;
+			background: var(--surface);
+			color: var(--text-primary);
+			transition: all 0.3s ease;
+		}
+		input[type="file"] {
+			width: 100%;
+			padding: 12px 16px;
+			border: 2px solid var(--border);
+			border-radius: 12px;
+			background: var(--surface);
+			color: var(--text-primary);
+			font-size: 14px;
+			transition: all 0.3s ease;
+		}
+		input:focus, select:focus {
+			border-color: var(--primary-green);
+			box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+			outline: none;
+		}
+		.submit-buttons {
+			display: flex;
+			gap: 8px;
+			margin-bottom: 24px;
+		}
+		.submit-buttons button, .submit-buttons a { flex: 1; text-align: center; }
+		@media (max-width: 768px) {
+			.grid { grid-template-columns: 1fr; }
+			.container { padding: 12px; }
+			.topbar { flex-direction: column; gap: 12px; }
+		}
+	</style>
+</head>
+<body>
+	<!-- Loading Screen -->
+	<div class="loading-screen" id="loadingScreen">
+		<img src="/logo.png" alt="EcoSENS Logo" class="loading-logo">
+	</div>
+
+	<!-- Main Content -->
+	<div class="main-content" id="mainContent">
+	<div class="container">
+		<div class="topbar">
+			<div class="brand">
+				<img src="/logo.png" alt="EcoSENS Logo" class="brand-logo">
+				EcoSENS
+			</div>
+			<div class="nav">
+				<a href="/my-farm" class="tab active">My Farm</a>
+				<a href="/feed" class="tab">Feed</a>
+				<a href="/profile" class="tab">Profile</a>
+			</div>
+			<button class="btn" id="logoutBtn">Logout</button>
+		</div>
+
+		<!-- Pest Trap Analysis -->
+		<div class="card">
+			<h3>Pest Trap Analysis</h3>
+			<form id="pestTrapForm">
+				<div class="form-group">
+					<input type="file" id="pestImage" accept="image/*" required />
+				</div>
+				<button type="submit" class="btn-submit">Upload & Analyze</button>
+			</form>
+			<div id="areaInfo" style="margin-top: 8px; font-size: 12px; color: #666;"></div>
+			<div id="analysisResult" style="margin-top: 12px; font-size: 14px;"></div>
+		</div>
+
+		<!-- Microclimate Data -->
+		<div class="card">
+			<h3>Microclimate Data</h3>
+			<form id="microclimateForm">
+				<div class="form-group">
+					<label>Air Temperature (°C)</label>
+					<input type="number" id="airTemp" step="0.1" placeholder="25.0" required />
+				</div>
+				<div class="form-group">
+					<label>Soil Temperature (°C)</label>
+					<input type="number" id="soilTemp" step="0.1" placeholder="22.0" required />
+				</div>
+				<div class="form-group">
+					<label>Soil Moisture (%)</label>
+					<input type="number" id="soilMoisture" min="0" max="100" step="0.1" placeholder="45.0" required />
+				</div>
+				<div class="form-group">
+					<label>Relative Humidity (%)</label>
+					<input type="number" id="humidity" min="0" max="100" step="0.1" placeholder="60.0" required />
+				</div>
+				<button type="submit" class="btn-submit">Submit Microclimate Data</button>
+			</form>
+			<div id="microclimateResult" style="margin-top: 12px; font-size: 14px;"></div>
+		</div>
+
+		<!-- Bottom section: Forecasts -->
+		<div class="grid">
+			<div class="card">
+				<h3>Pest Risk Forecast</h3>
+				<div class="submit-buttons">
+					<button class="btn-submit secondary" id="refreshForecast">Get Pest Forecast</button>
+					<a href="/submissions" class="btn-submit secondary" style="text-decoration: none;">View Pest Submissions</a>
+				</div>
+				<div id="forecastResult" style="margin-top: 12px; font-size: 16px; font-weight: bold;"></div>
+			</div>
+			<div class="card">
+				<h3>Heat Stress Forecast</h3>
+				<div class="submit-buttons">
+					<button class="btn-submit secondary" id="refreshHeatStress">Get Heat Stress Forecast</button>
+					<a href="/microclimate-submissions" class="btn-submit secondary" style="text-decoration: none;">View Microclimate Submissions</a>
+				</div>
+				<div id="heatStressResult" style="margin-top: 12px; font-size: 16px; font-weight: bold;"></div>
+			</div>
+		</div>
+		</div>
+	</div>
+
+	<script>
+		// Logout
+		document.getElementById('logoutBtn').addEventListener('click', async () => {
+			try {
+				const res = await fetch('/api/logout', { method: 'POST' });
+				if (res.ok) {
+					window.location.href = '/login';
+				}
+			} catch (e) { 
+				console.error('Logout failed', e); 
+				window.location.href = '/login';
+			}
+		});
+
+		// Load user area info on page load
+		async function loadUserArea() {
+			try {
+				const res = await fetch('/api/profile');
+				const data = await res.json();
+				const areaDiv = document.getElementById('areaInfo');
+				const userArea = data.country || 'Unknown Location';
+				areaDiv.textContent = `Analysis area: ${userArea}`;
+				window.userArea = userArea; // Store for later use
+			} catch (error) {
+				console.error('Error loading user area:', error);
+				const areaDiv = document.getElementById('areaInfo');
+				areaDiv.textContent = 'Analysis area: Unknown Location';
+				window.userArea = 'Unknown Location';
+			}
+		}
+
+		// Pest Trap Image Upload and Analysis
+		document.getElementById('pestTrapForm').addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const imageFile = document.getElementById('pestImage').files[0];
+			
+			if (!imageFile) {
+				alert('Please select an image file');
+				return;
+			}
+			
+			const formData = new FormData();
+			formData.append('image', imageFile);
+			formData.append('areaId', window.userArea || 'Unknown Location');
+			
+			const resultDiv = document.getElementById('analysisResult');
+			resultDiv.innerHTML = '<div style="color: #2196F3;">Analyzing image...</div>';
+			
+			try {
+				const res = await fetch('/api/upload-pest-trap', {
+					method: 'POST',
+					body: formData
+				});
+				const data = await res.json();
+				
+				if (data.success) {
+					resultDiv.innerHTML = `
+						<div style="color: #4CAF50;">
+							<strong>Analysis Complete!</strong><br/>
+							Pest Amount: <strong>${data.pestAmount.toUpperCase()}</strong><br/>
+							Risk Level: <strong>${data.riskLevel.toUpperCase()}</strong><br/>
+							<span style="font-size: 12px; color: #666;">${data.advice}</span><br/>
+							<span style="font-size: 12px;">Country: ${data.country}</span>
+						</div>
+					`;
+					refreshForecast();
+				} else {
+					resultDiv.innerHTML = `<div style="color: #f44336;">Error: ${data.error || 'Analysis failed'}</div>`;
+				}
+			} catch (error) {
+				console.error('Upload error:', error);
+				resultDiv.innerHTML = '<div style="color: #f44336;">Upload failed. Please try again.</div>';
+			}
+		});
+
+		// Microclimate Data Submission
+		document.getElementById('microclimateForm').addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const airTemperature = document.getElementById('airTemp').value;
+			const soilTemperature = document.getElementById('soilTemp').value;
+			const soilMoisture = document.getElementById('soilMoisture').value;
+			const relativeHumidity = document.getElementById('humidity').value;
+			
+			if (!airTemperature || !soilTemperature || !soilMoisture || !relativeHumidity) {
+				alert('Please fill in all fields');
+				return;
+			}
+			
+			const resultDiv = document.getElementById('microclimateResult');
+			resultDiv.innerHTML = '<div style="color: #2196F3;">Submitting microclimate data...</div>';
+			
+			try {
+				const res = await fetch('/api/submit-microclimate', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						airTemperature: parseFloat(airTemperature),
+						soilTemperature: parseFloat(soilTemperature),
+						soilMoisture: parseFloat(soilMoisture),
+						relativeHumidity: parseFloat(relativeHumidity)
+					})
+				});
+				const data = await res.json();
+				
+				if (data.success) {
+					let color = '#4CAF50'; // green
+					if (data.heatStressLevel === 'critical') color = '#f44336';
+					else if (data.heatStressLevel === 'high') color = '#ff5722';
+					else if (data.heatStressLevel === 'moderate') color = '#ff9800';
+					else if (data.heatStressLevel === 'low') color = '#8bc34a';
+					
+					resultDiv.innerHTML = `
+						<div style="color: ${color};">
+							<strong>Microclimate Data Submitted!</strong><br/>
+							Heat Stress Level: <strong>${data.heatStressLevel.toUpperCase()}</strong><br/>
+							<span style="font-size: 12px; color: #666;">${data.advice}</span><br/>
+							<span style="font-size: 12px;">Area: ${data.country}</span>
+						</div>
+					`;
+					
+					refreshHeatStress();
+				} else {
+					resultDiv.innerHTML = `<div style="color: #f44336;">Error: ${data.error || 'Submission failed'}</div>`;
+				}
+			} catch (error) {
+				console.error('Microclimate submission error:', error);
+				resultDiv.innerHTML = '<div style="color: #f44336;">Submission failed. Please try again.</div>';
+			}
+		});
+
+		// Pest Risk Forecast
+		async function refreshForecast() {
+			const resultDiv = document.getElementById('forecastResult');
+			const areaId = window.userArea || 'Unknown Location';
+			
+			resultDiv.innerHTML = '<div style="color: #2196F3;">Computing forecast...</div>';
+			
+			try {
+				const res = await fetch(`/api/pest-forecast?areaId=${encodeURIComponent(areaId)}`);
+				const data = await res.json();
+				
+				if (data.success) {
+					let color = '#4CAF50'; // green
+					if (data.riskLevel === 'high') color = '#f44336'; // red
+					else if (data.riskLevel === 'medium') color = '#ff9800'; // orange
+					
+					resultDiv.innerHTML = `
+						<div style="color: ${color};">
+							Risk Level: <br/><strong>${data.riskLevel.toUpperCase()}</strong><br/>
+							<span style="font-size: 14px; color: #666;">${data.advice}</span>
+						</div>
+					`;
+				} else {
+					resultDiv.innerHTML = `<div style="color: #f44336;">Could not fetch forecast.</div>`;
+				}
+			} catch (error) {
+				console.error('Forecast error:', error);
+				resultDiv.innerHTML = '<div style="color: #f44336;">Forecast failed.</div>';
+			}
+		}
+		
+		document.getElementById('refreshForecast').addEventListener('click', refreshForecast);
+
+		// Heat Stress Forecast
+		async function refreshHeatStress() {
+			const resultDiv = document.getElementById('heatStressResult');
+			const areaId = window.userArea || 'Unknown Location';
+			
+			resultDiv.innerHTML = '<div style="color: #2196F3;">Computing heat stress forecast...</div>';
+			
+			try {
+				const res = await fetch(`/api/heat-stress-forecast?areaId=${encodeURIComponent(areaId)}`);
+				const data = await res.json();
+				
+				if (data.success) {
+					let color = '#4CAF50'; // green
+					if (data.heatStressLevel === 'critical') color = '#f44336';
+					else if (data.heatStressLevel === 'high') color = '#ff5722';
+					else if (data.heatStressLevel === 'moderate') color = '#ff9800';
+					else if (data.heatStressLevel === 'low') color = '#8bc34a';
+					
+					resultDiv.innerHTML = `
+						<div style="color: ${color};">
+							Heat Stress Level: <br/><strong>${data.heatStressLevel.toUpperCase()}</strong><br/>
+							<span style="font-size: 14px; color: #666;">${data.advice}</span><br/>
+							<span style="font-size: 12px; color: #999;">Recent submissions: ${data.recentSubmissions || 0}</span>
+						</div>
+					`;
+				} else {
+					resultDiv.innerHTML = `<div style="color: #f44336;">Could not fetch heat stress forecast.</div>`;
+				}
+			} catch (error) {
+				console.error('Heat stress forecast error:', error);
+				resultDiv.innerHTML = '<div style="color: #f44336;">Heat stress forecast failed.</div>';
+			}
+		}
+		
+		document.getElementById('refreshHeatStress').addEventListener('click', refreshHeatStress);
+
+		// Load user area and forecasts on page load
+		loadUserArea();
+		
+		// Wait a moment for area to load, then refresh forecasts
+		setTimeout(() => {
+			refreshForecast();
+			refreshHeatStress();
+		}, 500);
+
+
+		// Loading Screen Management
+		window.addEventListener('load', function() {
+			// Only show loading screen after login/signup
+			const showLoadingScreen = sessionStorage.getItem('showLoadingScreen');
+			if (showLoadingScreen === 'true') {
+				// Clear the flag so it doesn't show on subsequent pages
+				sessionStorage.removeItem('showLoadingScreen');
+				
+				// Show loading screen
+				const loadingScreen = document.getElementById('loadingScreen');
+				const mainContent = document.getElementById('mainContent');
+				
+				loadingScreen.style.display = 'flex';
+				
+				setTimeout(() => {
+					loadingScreen.classList.add('hidden');
+					mainContent.classList.add('loaded');
+					
+					// Remove loading screen from DOM after fade out
+					setTimeout(() => {
+						loadingScreen.style.display = 'none';
+					}, 500);
+				}, 1000);
+			} else {
+				// Keep loading screen hidden for normal page navigation
+				const mainContent = document.getElementById('mainContent');
+				mainContent.classList.add('loaded');
+			}
+		});
+	</script>
+</body>
+</html>
